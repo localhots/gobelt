@@ -19,7 +19,6 @@ func TestFileCache(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error occurred while loading cache: %v", err)
 		}
-
 		if res != exp {
 			t.Errorf("Expected %d, got %d", exp, res)
 		}
