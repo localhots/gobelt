@@ -99,6 +99,10 @@ func renderBytes(src []byte, typ genericType) []byte {
 
 func render(src string, typ genericType) string {
 	const genericTypeName = "TypeName"
+	const doNotEditBanner = `/*******************************************************************************
+THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT!
+*******************************************************************************/
+`
 	// Replace test constants
 	src = strings.Replace(src, "One   TypeName = 1", "One   TypeName = "+typ.testVals[0], 1)
 	src = strings.Replace(src, "Two   TypeName = 2", "Two   TypeName = "+typ.testVals[1], 1)
@@ -107,7 +111,7 @@ func render(src string, typ genericType) string {
 	src = strings.Replace(src, "Five  TypeName = 5", "Five  TypeName = "+typ.testVals[4], 1)
 	// Replace the type name
 	src = strings.Replace(src, genericTypeName, typ.name, -1)
-	return src
+	return doNotEditBanner + src
 }
 
 func gofmt(dir string) error {

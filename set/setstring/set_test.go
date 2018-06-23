@@ -1,3 +1,6 @@
+/*******************************************************************************
+THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT!
+*******************************************************************************/
 package impl
 
 import (
@@ -98,9 +101,7 @@ func TestSlice(t *testing.T) {
 	s := New(One, Two, Three)
 	out := s.Slice()
 	exp := []string{One, Two, Three}
-	ignoreOrder := cmpopts.SortSlices(func(a, b string) bool {
-		return a < b
-	})
+	ignoreOrder := cmpopts.SortSlices(func(a, b string) bool { return a < b })
 	if !cmp.Equal(exp, out, ignoreOrder) {
 		t.Errorf("Retured slice does not match: %s", cmp.Diff(exp, out))
 	}
