@@ -30,3 +30,17 @@ filecache.Load(&val, "path/to/cachefile", func() interface{} {
     return 100
 })
 ```
+
+### Log
+
+```go
+import "github.com/localhots/gobelt/log"
+```
+
+```go
+log.Info("New user signed up", log.F{
+    "name":  u.Name,
+    "email": u.Email,
+})
+log.Errorf("Invalid database flavor: %s", flavor)
+```
