@@ -73,5 +73,5 @@ func withFields(f F) *logrus.Entry {
 	if len(f) == 0 {
 		return logrus.NewEntry(Logger)
 	}
-	return logrus.WithFields(logrus.Fields(f))
+	return Logger.WithFields(logrus.Fields(f))
 }

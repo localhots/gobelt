@@ -10,7 +10,7 @@ import "github.com/localhots/gobelt/threadpool"
 
 ```go
 ctx := context.Background()
-ctx, cancel = context.WithTimeout(ctx, 30 * time.Second)
+ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 defer cancel()
 
 pool := threadpool.New(10)
@@ -30,12 +30,13 @@ import "github.com/localhots/gobelt/filecache"
 ```
 
 ```go
+ctx := context.Background()
 var val int
-filecache.Load(&val, "path/to/cachefile", func() interface{} {
+filecache.Load(&val, "tmp/cache/items.json", func() interface{} {
     var items []Item
     err := conn.Query(ctx, "SELECT * FROM items").Load(&items).Error()
     if err != nil {
-        log.Fatal("Failed to load items", log.F{"error": err})
+        log.Fatalf("Failed to load items: %v", err)
     }
     return items
 })
@@ -60,4 +61,28 @@ if err != nil {
 
 log.Info(ctx, "New user signed up", log.F{"id": user.ID})
 // [INFO] New user signed up    email=bob@example.com  id=14 
+```
+
+### Set
+
+There is a collection of packages implementing a set data type located inside
+the `set` package. Implemented types include:
+
+* `int`, `int8`, `int16`, `int32`, `int64` 
+* `uint`, `uint8`, `uint16`, `uint32`, `uint64`
+* `string`
+
+All the package names are type names prefixed with "set", e.g. `setuint64`.
+
+```go
+import "github.com/localhots/gobelt/set/setstring"
+```
+
+```go
+s := setstring.New("one", "two")
+s.Add("three")
+s.Remove("one", "two").Add("four", "five")
+fmt.Println("Size:", s.Len()) // 3
+fmt.Println("Has one", s.Has("one"))
+fmt.Println(s.SortedSlice()) // [three four five]
 ```
