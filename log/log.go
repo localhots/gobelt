@@ -1,6 +1,8 @@
 package log
 
 import (
+	"context"
+
 	"github.com/lytics/logrus"
 )
 
@@ -15,58 +17,61 @@ func init() {
 }
 
 // Debug prints a debug message with given fields attached.
-func Debug(msg string, fields ...F) {
-	withFields(fields).Debug(msg)
+func Debug(ctx context.Context, msg string, fields ...F) {
+	withFields(mergeFields(ctx, fields)).Debug(msg)
 }
 
 // Debugf prints a formatted debug message.
-func Debugf(format string, args ...interface{}) {
-	logrus.Debugf(format, args...)
+func Debugf(ctx context.Context, format string, args ...interface{}) {
+	withFields(contextFields(ctx)).Debugf(format, args...)
 }
 
 // Info prints an info message with given fields attached.
-func Info(msg string, fields ...F) {
-	withFields(fields).Info(msg)
+func Info(ctx context.Context, msg string, fields ...F) {
+	withFields(mergeFields(ctx, fields)).Info(msg)
 }
 
 // Infof prints a formatted info message.
-func Infof(format string, args ...interface{}) {
-	logrus.Infof(format, args...)
+func Infof(ctx context.Context, format string, args ...interface{}) {
+	withFields(contextFields(ctx)).Infof(format, args...)
 }
 
 // Error prints an error message with given fields attached.
-func Error(msg string, fields ...F) {
-	withFields(fields).Error(msg)
+func Error(ctx context.Context, msg string, fields ...F) {
+	withFields(mergeFields(ctx, fields)).Error(msg)
 }
 
 // Errorf prints a formatted error message.
-func Errorf(format string, args ...interface{}) {
-	logrus.Errorf(format, args...)
+func Errorf(ctx context.Context, format string, args ...interface{}) {
+	withFields(contextFields(ctx)).Errorf(format, args...)
 }
 
 // Fatal prints an error message with given fields attached and then exits.
-func Fatal(msg string, fields ...F) {
-	withFields(fields).Fatal(msg)
+func Fatal(ctx context.Context, msg string, fields ...F) {
+	withFields(mergeFields(ctx, fields)).Fatal(msg)
 }
 
 // Fatalf prints a formatted error message and then exits.
-func Fatalf(format string, args ...interface{}) {
-	logrus.Fatalf(format, args...)
+func Fatalf(ctx context.Context, format string, args ...interface{}) {
+	withFields(contextFields(ctx)).Fatalf(format, args...)
 }
 
-func withFields(fields []F) *logrus.Entry {
-	switch len(fields) {
-	case 0:
-		return logrus.NewEntry(Logger)
-	case 1:
-		return logrus.WithFields(logrus.Fields(fields[0]))
-	default:
-		f := F{}
-		for i := 0; i < len(fields); i++ {
-			for k, v := range fields[i] {
-				f[k] = v
-			}
-		}
-		return logrus.WithFields(logrus.Fields(f))
+func mergeFields(ctx context.Context, fields []F) F {
+	ctxf := contextFields(ctx)
+	if len(ctxf) == 0 && len(fields) == 0 {
+		return nil
 	}
+	for i := 0; i < len(fields); i++ {
+		for k, v := range fields[i] {
+			ctxf[k] = v
+		}
+	}
+	return ctxf
+}
+
+func withFields(f F) *logrus.Entry {
+	if len(f) == 0 {
+		return logrus.NewEntry(Logger)
+	}
+	return logrus.WithFields(logrus.Fields(f))
 }
