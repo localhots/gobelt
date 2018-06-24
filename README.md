@@ -31,14 +31,12 @@ import "github.com/localhots/gobelt/filecache"
 
 ```go
 ctx := context.Background()
-var val int
-filecache.Load(&val, "tmp/cache/items.json", func() interface{} {
-    var items []Item
+var items []Item
+filecache.Load(&items, "tmp/cache/items.json", func() {  
     err := conn.Query(ctx, "SELECT * FROM items").Load(&items).Error()
     if err != nil {
         log.Fatalf("Failed to load items: %v", err)
     }
-    return items
 })
 ```
 
@@ -83,6 +81,37 @@ s := setstring.New("one", "two")
 s.Add("three")
 s.Remove("one", "two").Add("four", "five")
 fmt.Println("Size:", s.Len()) // 3
-fmt.Println("Has one", s.Has("one"))
+fmt.Println("Has one", s.Has("one")) // false
 fmt.Println(s.SortedSlice()) // [three four five]
+```
+
+### Config
+
+```go
+import "github.com/localhots/gobelt/config"
+```
+
+Describe configuration structure inside a target package.
+
+```go
+package db
+
+var conf struct {
+    Flavor string `toml:"flavor"`
+    DSN    string `toml:"dsn"`
+}
+
+func init() {
+    config.Require("db", &conf)
+}
+```
+
+Load configuration from a `main` function:
+
+```go
+package main
+
+func main() {
+    config.Load("config/config.toml")
+}
 ```

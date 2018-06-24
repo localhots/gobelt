@@ -4,18 +4,15 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"reflect"
 )
 
 // Load will look for a given file. If it exists, it would unmarshal its
 // contents into the given value. If the file does not exist, a supplied
 // function would be called and its output would be written to a file.
-func Load(val interface{}, filename string, fn func() interface{}) error {
+func Load(val interface{}, filename string, fn func()) error {
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {
-		out := fn()
-		reflect.ValueOf(val).Elem().Set(reflect.ValueOf(out))
-
+		fn()
 		body, err := json.Marshal(val)
 		if err != nil {
 			return err

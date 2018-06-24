@@ -12,9 +12,9 @@ func TestFileCache(t *testing.T) {
 	var res int
 	var nCalled int
 	for i := 0; i < 10; i++ {
-		err := Load(&res, filename, func() interface{} {
+		err := Load(&res, filename, func() {
 			nCalled++
-			return exp
+			res = exp
 		})
 		if err != nil {
 			t.Fatalf("Error occurred while loading cache: %v", err)
