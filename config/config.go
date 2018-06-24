@@ -11,21 +11,34 @@ func Require(key string, dest interface{}) {
 	configs[key] = dest
 }
 
-// Load reads the config file and distributes provided configuration to
+// Load ...
+func Load(src string) error {
+	return load(src, toml.Decode)
+}
+
+// LoadFile reads the config file and distributes provided configuration to
 // requested destinations.
-func Load(path string) error {
-	var conf map[string]toml.Primitive
-	meta, err := toml.DecodeFile(path, &conf)
+func LoadFile(path string) error {
+	return load(path, toml.DecodeFile)
+}
+
+func load(from string, withFn func(string, interface{}) (toml.MetaData, error)) error {
+	var sections map[string]toml.Primitive
+	meta, err := withFn(from, &sections)
 	if err != nil {
 		return err
 	}
+	return decode(meta, sections)
+}
 
-	for key, prim := range conf {
-		dest, ok := configs[key]
+func decode(meta toml.MetaData, sections map[string]toml.Primitive) error {
+	for section, conf := range sections {
+		dest, ok := configs[section]
 		if !ok {
 			continue
 		}
-		err := meta.PrimitiveDecode(prim, dest)
+
+		err := meta.PrimitiveDecode(conf, dest)
 		if err != nil {
 			return err
 		}

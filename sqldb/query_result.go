@@ -6,61 +6,29 @@ import (
 	"reflect"
 )
 
-// Result represents query result.
-type Result interface {
-	// Load decodes rows into provided variable.
-	Load(dest interface{}) Result
-	// Error returns an error if one happened during query execution.
+// QueryResult ...
+type QueryResult interface {
 	Error() error
-	// Rows returns original database rows object.
+	Load(dest interface{}) error
 	Rows() *sql.Rows
-	// LastInsertID returns the last inserted record ID for results obtained
-	// from Exec calls.
-	LastInsertID() int64
-	// RowsAffected returns the number of rows affected for results obtained
-	// from Exec calls.
-	RowsAffected() int64
 }
 
-type result struct {
-	rows *sql.Rows
-	res  sql.Result
+type queryResult struct {
 	err  error
+	rows *sql.Rows
 }
 
-func (r result) Rows() *sql.Rows {
+func (r *queryResult) Rows() *sql.Rows {
 	return r.rows
 }
 
-func (r result) Error() error {
+func (r *queryResult) Error() error {
 	return r.err
 }
 
-func (r result) LastInsertID() int64 {
-	if r.res == nil {
-		return 0
-	}
-	id, err := r.res.LastInsertId()
-	if err != nil {
-		return 0
-	}
-	return id
-}
-
-func (r result) RowsAffected() int64 {
-	if r.res == nil {
-		return 0
-	}
-	ra, err := r.res.RowsAffected()
-	if err != nil {
-		return 0
-	}
-	return ra
-}
-
-func (r result) Load(dest interface{}) Result {
+func (r *queryResult) Load(dest interface{}) error {
 	if r.err != nil {
-		return r
+		return r.err
 	}
 	defer r.rows.Close()
 
@@ -89,19 +57,19 @@ func (r result) Load(dest interface{}) Result {
 	}
 
 	if r.err == nil && r.rows.Err() != nil {
-		return r.withError(r.rows.Err())
+		return r.rows.Err()
 	}
 
-	return r
+	return nil
 }
 
-func (r *result) loadValue(dest interface{}) {
+func (r *queryResult) loadValue(dest interface{}) {
 	if r.rows.Next() {
 		r.err = r.rows.Scan(dest)
 	}
 }
 
-func (r *result) loadSlice(typ reflect.Type, dest interface{}) {
+func (r *queryResult) loadSlice(typ reflect.Type, dest interface{}) {
 	vSlice := reflect.MakeSlice(typ, 0, 0)
 	for r.rows.Next() {
 		val := reflect.New(typ.Elem())
@@ -114,7 +82,7 @@ func (r *result) loadSlice(typ reflect.Type, dest interface{}) {
 	reflect.ValueOf(dest).Elem().Set(vSlice)
 }
 
-func (r *result) loadMap(dest *map[string]interface{}) {
+func (r *queryResult) loadMap(dest *map[string]interface{}) {
 	if !r.rows.Next() {
 		return
 	}
@@ -155,7 +123,7 @@ func (r *result) loadMap(dest *map[string]interface{}) {
 	}
 }
 
-func (r *result) loadSliceOfMaps(dest *[]map[string]interface{}) {
+func (r *queryResult) loadSliceOfMaps(dest *[]map[string]interface{}) {
 	cols, err := r.rows.Columns()
 	if err != nil {
 		r.err = err
@@ -196,7 +164,7 @@ func (r *result) loadSliceOfMaps(dest *[]map[string]interface{}) {
 	}
 }
 
-func (r *result) loadStruct(typ reflect.Type, dest interface{}) {
+func (r *queryResult) loadStruct(typ reflect.Type, dest interface{}) {
 	if !r.rows.Next() {
 		return
 	}
@@ -232,7 +200,7 @@ func (r *result) loadStruct(typ reflect.Type, dest interface{}) {
 	}
 }
 
-func (r *result) loadSliceOfStructs(typ reflect.Type, dest interface{}) {
+func (r *queryResult) loadSliceOfStructs(typ reflect.Type, dest interface{}) {
 	cols, err := r.rows.Columns()
 	if err != nil {
 		r.err = err
@@ -271,7 +239,7 @@ func (r *result) loadSliceOfStructs(typ reflect.Type, dest interface{}) {
 	}
 }
 
-func (r result) withError(err error) Result {
+func (r *queryResult) withError(err error) *queryResult {
 	r.err = err
 	return r
 }

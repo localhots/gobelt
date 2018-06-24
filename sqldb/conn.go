@@ -3,27 +3,31 @@ package sqldb
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/juju/errors"
 )
 
 // Conn represents database connection.
-type Conn struct {
-	db *sql.DB
-
-	beforeCallbacks []BeforeCallback
-	afterCallbacks  []AfterCallback
+type Conn interface {
+	connOrTx
+	Begin(context.Context, func(Tx) error) error
+	Close() error
+	DB() *sql.DB
+	Before(BeforeCallback)
+	After(AfterCallback)
 }
 
-type (
-	// BeforeCallback is a kind of function that can be called before a query is
-	// executed.
-	BeforeCallback func(ctx context.Context, query string)
-	// AfterCallback is a kind of function that can be called after a query was
-	// executed.
-	AfterCallback func(ctx context.Context, query string, took time.Duration, err error)
-)
+// Tx represents database transacation.
+type Tx interface {
+	connOrTx
+	Commit() error
+	Rollback() error
+}
+
+type dbWrapper struct {
+	conn *sql.DB
+	*caller
+}
 
 // Flavor defines a kind of SQL database.
 type Flavor string
@@ -36,7 +40,7 @@ const (
 )
 
 // Connect establishes a new database connection.
-func Connect(ctx context.Context, f Flavor, dsn string) (*Conn, error) {
+func Connect(ctx context.Context, f Flavor, dsn string) (Conn, error) {
 	conn, err := sql.Open(string(f), dsn)
 	if err != nil {
 		return nil, errors.Annotate(err, "Failed to establish connection")
@@ -45,62 +49,69 @@ func Connect(ctx context.Context, f Flavor, dsn string) (*Conn, error) {
 	if err != nil {
 		return nil, errors.Annotate(err, "Connection is not responding")
 	}
-	return &Conn{db: conn}, nil
+	return &dbWrapper{
+		conn: conn,
+		caller: &caller{
+			db: conn,
+			cb: &callbacks{},
+		},
+	}, nil
 }
 
-// Exec executes a query and does not expect any result.
-func (c *Conn) Exec(ctx context.Context, query string, args ...interface{}) Result {
-	c.callBefore(ctx, query)
-	startedAt := time.Now()
-	res, err := c.db.ExecContext(ctx, query, args...)
-	c.callAfter(ctx, query, time.Since(startedAt), err)
+// Begin executes a transaction.
+func (c *dbWrapper) Begin(ctx context.Context, fn func(tx Tx) error) error {
+	tx, err := c.conn.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
-		return result{err: err}
+		return err
 	}
-	return result{res: res}
-}
-
-// Query executes a query and returns a result object that can later be used to
-// retrieve values.
-func (c *Conn) Query(ctx context.Context, query string, args ...interface{}) Result {
-	var r result
-	c.callBefore(ctx, query)
-	startedAt := time.Now()
-	r.rows, r.err = c.db.QueryContext(ctx, query, args...)
-	c.callAfter(ctx, query, time.Since(startedAt), r.err)
-	return r
+	err = fn(c.wrapTx(tx))
+	if err != nil {
+		tx.Rollback()
+	}
+	return err
 }
 
 // DB returns the underlying DB object.
-func (c *Conn) DB() *sql.DB {
-	return c.db
+func (c *dbWrapper) DB() *sql.DB {
+	return c.conn
 }
 
 // Close closes the connection.
-func (c *Conn) Close() error {
-	return c.db.Close()
+func (c *dbWrapper) Close() error {
+	return c.conn.Close()
 }
 
 // Before adds a callback function that would be called before a query is
 // executed.
-func (c *Conn) Before(cb BeforeCallback) {
-	c.beforeCallbacks = append(c.beforeCallbacks, cb)
+func (c *dbWrapper) Before(cb BeforeCallback) {
+	c.cb.addBefore(cb)
 }
 
 // After adds a callback function that would be called after a query was
 // executed.
-func (c *Conn) After(cb AfterCallback) {
-	c.afterCallbacks = append(c.afterCallbacks, cb)
+func (c *dbWrapper) After(cb AfterCallback) {
+	c.cb.addAfter(cb)
 }
 
-func (c *Conn) callBefore(ctx context.Context, query string) {
-	for _, cb := range c.beforeCallbacks {
-		cb(ctx, query)
+func (c *dbWrapper) wrapTx(tx *sql.Tx) Tx {
+	return &txWrapper{
+		tx: tx,
+		connOrTx: &caller{
+			db: tx,
+			cb: c.cb,
+		},
 	}
 }
 
-func (c *Conn) callAfter(ctx context.Context, query string, took time.Duration, err error) {
-	for _, cb := range c.afterCallbacks {
-		cb(ctx, query, took, err)
-	}
+type txWrapper struct {
+	tx *sql.Tx
+	connOrTx
+}
+
+func (w *txWrapper) Commit() error {
+	return w.tx.Commit()
+}
+
+func (w *txWrapper) Rollback() error {
+	return w.tx.Rollback()
 }
