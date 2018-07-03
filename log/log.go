@@ -3,7 +3,7 @@ package log
 import (
 	"context"
 
-	"github.com/lytics/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Logger is a Logrus logger used by the package.
