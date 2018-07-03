@@ -1,8 +1,0 @@
-[numbers]
-ary = [1, 2, 3]
-i = 123
-
-[words]
-foo = "bar"
-[words.list]
-foo = ["buzz", "fizz"]
