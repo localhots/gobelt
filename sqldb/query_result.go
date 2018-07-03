@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"reflect"
+
+	"github.com/localhots/gobelt/reflect2"
 )
 
 // QueryResult ...
@@ -12,6 +14,8 @@ type QueryResult interface {
 	Load(dest interface{}) error
 	Rows() *sql.Rows
 }
+
+const tagName = "db"
 
 type queryResult struct {
 	err  error
@@ -177,7 +181,7 @@ func (r *queryResult) loadStruct(typ reflect.Type, dest interface{}) {
 
 	val := reflect.ValueOf(dest).Elem()
 	vals := make([]interface{}, len(cols))
-	tm := tagMap(cols, val.Type())
+	tm := reflect2.AssociateColumns(val.Type(), tagName, cols)
 	for i := range cols {
 		if fi, ok := tm[i]; ok {
 			fval := val.Field(fi)
@@ -210,7 +214,7 @@ func (r *queryResult) loadSliceOfStructs(typ reflect.Type, dest interface{}) {
 	vSlice := reflect.ValueOf(dest).Elem()
 	tSlice := vSlice.Type()
 	tElem := tSlice.Elem()
-	tm := tagMap(cols, tElem)
+	tm := reflect2.AssociateColumns(tElem, tagName, cols)
 
 	for r.rows.Next() {
 		vals := make([]interface{}, len(cols))
@@ -258,23 +262,4 @@ func newValue(typ *sql.ColumnType) interface{} {
 	default:
 		panic(fmt.Errorf("Unsupported MySQL type: %s", typ.DatabaseTypeName()))
 	}
-}
-
-func tagMap(cols []string, typ reflect.Type) map[int]int {
-	fieldIndices := map[string]int{}
-	for i := 0; i < typ.NumField(); i++ {
-		tag := typ.Field(i).Tag.Get("db")
-		if tag != "" {
-			fieldIndices[tag] = i
-		}
-	}
-
-	colFields := map[int]int{}
-	for i, col := range cols {
-		if fi, ok := fieldIndices[col]; ok {
-			colFields[i] = fi
-		}
-	}
-
-	return colFields
 }
