@@ -1,14 +1,13 @@
 /*******************************************************************************
 THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT!
 *******************************************************************************/
-package impl
+package setuint64
 
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp/cmpopts"
-
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 const (

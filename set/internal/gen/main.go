@@ -111,6 +111,8 @@ THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT EDIT!
 	src = strings.Replace(src, "Five  TypeName = 5", "Five  TypeName = "+typ.testVals[4], 1)
 	// Replace the type name
 	src = strings.Replace(src, genericTypeName, typ.name, -1)
+	// Replace package name
+	src = strings.Replace(src, "package impl", "package set"+typ.name, 1)
 	return doNotEditBanner + src
 }
 
