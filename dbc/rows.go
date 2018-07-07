@@ -1,4 +1,4 @@
-package sqldb
+package dbc
 
 import (
 	"database/sql"
@@ -8,8 +8,8 @@ import (
 	"github.com/localhots/gobelt/reflect2"
 )
 
-// QueryResult ...
-type QueryResult interface {
+// Rows ...
+type Rows interface {
 	Error() error
 	Load(dest interface{}) error
 	Rows() *sql.Rows
@@ -17,20 +17,20 @@ type QueryResult interface {
 
 const tagName = "db"
 
-type queryResult struct {
+type rows struct {
 	err  error
 	rows *sql.Rows
 }
 
-func (r *queryResult) Rows() *sql.Rows {
+func (r *rows) Rows() *sql.Rows {
 	return r.rows
 }
 
-func (r *queryResult) Error() error {
+func (r *rows) Error() error {
 	return r.err
 }
 
-func (r *queryResult) Load(dest interface{}) error {
+func (r *rows) Load(dest interface{}) error {
 	if r.err != nil {
 		return r.err
 	}
@@ -67,13 +67,13 @@ func (r *queryResult) Load(dest interface{}) error {
 	return nil
 }
 
-func (r *queryResult) loadValue(dest interface{}) {
+func (r *rows) loadValue(dest interface{}) {
 	if r.rows.Next() {
 		r.err = r.rows.Scan(dest)
 	}
 }
 
-func (r *queryResult) loadSlice(typ reflect.Type, dest interface{}) {
+func (r *rows) loadSlice(typ reflect.Type, dest interface{}) {
 	vSlice := reflect.MakeSlice(typ, 0, 0)
 	for r.rows.Next() {
 		val := reflect.New(typ.Elem())
@@ -86,7 +86,7 @@ func (r *queryResult) loadSlice(typ reflect.Type, dest interface{}) {
 	reflect.ValueOf(dest).Elem().Set(vSlice)
 }
 
-func (r *queryResult) loadMap(dest *map[string]interface{}) {
+func (r *rows) loadMap(dest *map[string]interface{}) {
 	if !r.rows.Next() {
 		return
 	}
@@ -127,7 +127,7 @@ func (r *queryResult) loadMap(dest *map[string]interface{}) {
 	}
 }
 
-func (r *queryResult) loadSliceOfMaps(dest *[]map[string]interface{}) {
+func (r *rows) loadSliceOfMaps(dest *[]map[string]interface{}) {
 	cols, err := r.rows.Columns()
 	if err != nil {
 		r.err = err
@@ -168,7 +168,7 @@ func (r *queryResult) loadSliceOfMaps(dest *[]map[string]interface{}) {
 	}
 }
 
-func (r *queryResult) loadStruct(typ reflect.Type, dest interface{}) {
+func (r *rows) loadStruct(typ reflect.Type, dest interface{}) {
 	if !r.rows.Next() {
 		return
 	}
@@ -204,7 +204,7 @@ func (r *queryResult) loadStruct(typ reflect.Type, dest interface{}) {
 	}
 }
 
-func (r *queryResult) loadSliceOfStructs(typ reflect.Type, dest interface{}) {
+func (r *rows) loadSliceOfStructs(typ reflect.Type, dest interface{}) {
 	cols, err := r.rows.Columns()
 	if err != nil {
 		r.err = err
@@ -243,7 +243,7 @@ func (r *queryResult) loadSliceOfStructs(typ reflect.Type, dest interface{}) {
 	}
 }
 
-func (r *queryResult) withError(err error) *queryResult {
+func (r *rows) withError(err error) Rows {
 	r.err = err
 	return r
 }

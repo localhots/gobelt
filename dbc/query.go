@@ -1,4 +1,4 @@
-package sqldb
+package dbc
 
 import (
 	"context"
@@ -20,8 +20,8 @@ type executer interface {
 type queryPerformer interface {
 	// Query executes a query and returns a result object that can later be used
 	// to retrieve values.
-	Query(ctx context.Context, query string, args ...interface{}) QueryResult
-	QueryNamed(ctx context.Context, query string, arg interface{}) QueryResult
+	Query(ctx context.Context, query string, args ...interface{}) Rows
+	QueryNamed(ctx context.Context, query string, arg interface{}) Rows
 }
 
 type stdConnOrTx interface {
@@ -51,17 +51,17 @@ func (c *caller) ExecNamed(ctx context.Context, query string, arg interface{}) E
 	return nil
 }
 
-func (c *caller) Query(ctx context.Context, query string, args ...interface{}) QueryResult {
+func (c *caller) Query(ctx context.Context, query string, args ...interface{}) Rows {
 	c.cb.callBefore(ctx, query)
 	startedAt := time.Now()
-	rows, err := c.db.QueryContext(ctx, query, args...)
+	r, err := c.db.QueryContext(ctx, query, args...)
 	c.cb.callAfter(ctx, query, time.Since(startedAt), err)
-	return &queryResult{
+	return &rows{
 		err:  err,
-		rows: rows,
+		rows: r,
 	}
 }
 
-func (c *caller) QueryNamed(ctx context.Context, query string, arg interface{}) QueryResult {
+func (c *caller) QueryNamed(ctx context.Context, query string, arg interface{}) Rows {
 	return nil
 }

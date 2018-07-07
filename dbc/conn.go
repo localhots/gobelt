@@ -1,4 +1,4 @@
-package sqldb
+package dbc
 
 import (
 	"context"
@@ -10,10 +10,19 @@ import (
 // Conn represents database connection.
 type Conn interface {
 	connOrTx
+	// Begin executes a transaction.
 	Begin(context.Context, func(Tx) error) error
+	// BeginCustom executes a transaction with provided options.
+	BeginCustom(context.Context, func(Tx) error, *sql.TxOptions) error
+	// Close closes the connection.
 	Close() error
+	// DB returns the underlying DB object.
 	DB() *sql.DB
+	// Before adds a callback function that would be called before a query is
+	// executed.
 	Before(BeforeCallback)
+	// After adds a callback function that would be called after a query was
+	// executed.
 	After(AfterCallback)
 }
 
@@ -58,9 +67,15 @@ func Connect(ctx context.Context, f Flavor, dsn string) (Conn, error) {
 	}, nil
 }
 
-// Begin executes a transaction.
 func (c *dbWrapper) Begin(ctx context.Context, fn func(tx Tx) error) error {
-	tx, err := c.conn.BeginTx(ctx, &sql.TxOptions{})
+	return c.BeginCustom(ctx, fn, nil)
+}
+
+func (c *dbWrapper) BeginCustom(ctx context.Context, fn func(tx Tx) error, opts *sql.TxOptions) error {
+	if opts == nil {
+		opts = &sql.TxOptions{}
+	}
+	tx, err := c.conn.BeginTx(ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -71,24 +86,18 @@ func (c *dbWrapper) Begin(ctx context.Context, fn func(tx Tx) error) error {
 	return err
 }
 
-// DB returns the underlying DB object.
 func (c *dbWrapper) DB() *sql.DB {
 	return c.conn
 }
 
-// Close closes the connection.
 func (c *dbWrapper) Close() error {
 	return c.conn.Close()
 }
 
-// Before adds a callback function that would be called before a query is
-// executed.
 func (c *dbWrapper) Before(cb BeforeCallback) {
 	c.cb.addBefore(cb)
 }
 
-// After adds a callback function that would be called after a query was
-// executed.
 func (c *dbWrapper) After(cb AfterCallback) {
 	c.cb.addAfter(cb)
 }

@@ -1,4 +1,4 @@
-package sqldb
+package dbc
 
 import (
 	"context"
@@ -16,7 +16,7 @@ type record struct {
 	Name string `db:"name"`
 }
 
-var conn *Conn
+var conn Conn
 
 func TestMain(m *testing.M) {
 	dsn := flag.String("dsn", "", "Database source name")
@@ -35,17 +35,17 @@ func TestMain(m *testing.M) {
 	}
 
 	log.Println("Seeding database")
-	must(conn.Exec(ctx, `
+	mustExecMain(conn.Exec(ctx, `
 		DROP TABLE IF EXISTS sqldb_test
 	`))
-	must(conn.Exec(ctx, `
+	mustExecMain(conn.Exec(ctx, `
 		CREATE TABLE sqldb_test (
 			id int(11) UNSIGNED NOT NULL,
 			name VARCHAR(10) DEFAULT '',
 			PRIMARY KEY (id)
 		) ENGINE=InnoDB DEFAULT CHARSET=ascii
 	`))
-	must(conn.Exec(ctx, `
+	mustExecMain(conn.Exec(ctx, `
 		INSERT INTO sqldb_test (id, name) 
 		VALUES
 			(1, "Alice"),
@@ -61,17 +61,24 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func mustT(t *testing.T, r Result) Result {
+func mustExec(t *testing.T, r ExecResult) ExecResult {
 	t.Helper()
 	if r.Error() != nil {
-		t.Fatalf("Query failed: %v", r.Error())
+		t.Fatalf("Exec failed: %v", r.Error())
 	}
 	return r
 }
 
-func must(r Result) Result {
+func mustExecMain(r ExecResult) ExecResult {
 	if r.Error() != nil {
 		log.Fatalf("Query failed: %v\n", r.Error())
 	}
 	return r
+}
+
+func mustQuery(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("Query failed: %v", err)
+	}
 }
