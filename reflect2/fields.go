@@ -25,3 +25,11 @@ func AssociateColumns(typ reflect.Type, tag string, cols []string) map[int]int {
 	}
 	return colFields
 }
+
+// Dereference keeps dereferencing pointers until a value is found.
+func Dereference(val reflect.Value) reflect.Value {
+	for val.Kind() == reflect.Ptr && val.CanAddr() {
+		val = val.Elem()
+	}
+	return val
+}
