@@ -64,7 +64,7 @@ func (r *rows) Load(dest interface{}) error {
 		return r.rows.Err()
 	}
 
-	return nil
+	return r.err
 }
 
 func (r *rows) loadValue(dest interface{}) {
