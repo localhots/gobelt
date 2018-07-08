@@ -3,9 +3,36 @@ package dbc
 import (
 	"fmt"
 	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/localhots/gobelt/reflect2"
 )
+
+var namedRegexp = regexp.MustCompile("" +
+	"`[^`]+`|" +
+	`'[^']+'|` +
+	`"[^"]+"|` +
+	`@[a-zA-Z][a-zA-Z0-9_]*`)
+
+func prepareNamedQuery(query string, p namedParams) (newQuery string, args []interface{}, err error) {
+	newQuery = namedRegexp.ReplaceAllStringFunc(query, func(m string) string {
+		if !strings.HasPrefix(m, "@") {
+			return m
+		}
+		val, ok := p.Get(m[1:])
+		if !ok {
+			err = fmt.Errorf("Named parameter %s was not found", m)
+		}
+		args = append(args, val)
+		return "?"
+	})
+	return
+}
+
+//
+// Params
+//
 
 type namedParams interface {
 	Get(name string) (val interface{}, ok bool)
@@ -58,9 +85,8 @@ func newNamedParamsStruct(s interface{}) (*namedParamsStruct, error) {
 }
 
 func (p *namedParamsStruct) Get(name string) (val interface{}, ok bool) {
-	i, ok := p.idx[name]
-	if !ok {
-		return nil, false
+	if i, ok := p.idx[name]; ok {
+		return p.s.Field(i).Interface(), true
 	}
-	return p.s.Field(i).Interface(), true
+	return nil, false
 }

@@ -48,7 +48,15 @@ func (c *caller) Exec(ctx context.Context, query string, args ...interface{}) Ex
 }
 
 func (c *caller) ExecNamed(ctx context.Context, query string, arg interface{}) ExecResult {
-	return nil
+	params, err := newNamedParams(arg)
+	if err != nil {
+		return &execResult{err: err}
+	}
+	preparedQuery, args, err := prepareNamedQuery(query, params)
+	if err != nil {
+		return &execResult{err: err}
+	}
+	return c.Exec(ctx, preparedQuery, args...)
 }
 
 func (c *caller) Query(ctx context.Context, query string, args ...interface{}) Rows {
@@ -63,5 +71,13 @@ func (c *caller) Query(ctx context.Context, query string, args ...interface{}) R
 }
 
 func (c *caller) QueryNamed(ctx context.Context, query string, arg interface{}) Rows {
-	return nil
+	params, err := newNamedParams(arg)
+	if err != nil {
+		return &rows{err: err}
+	}
+	preparedQuery, args, err := prepareNamedQuery(query, params)
+	if err != nil {
+		return &rows{err: err}
+	}
+	return c.Query(ctx, preparedQuery, args...)
 }
