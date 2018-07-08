@@ -1,14 +1,15 @@
 package dbc
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/localhots/gobelt/context2"
 )
 
 func TestLoadSingleValue(t *testing.T) {
-	ctx := context.Background()
+	requireConn(t)
+	ctx := context2.TestContext(t)
 	exp := int(1)
 	var out int
 	mustQuery(t, conn.Query(ctx, "SELECT 1").Load(&out))
@@ -18,7 +19,8 @@ func TestLoadSingleValue(t *testing.T) {
 }
 
 func TestLoadSlice(t *testing.T) {
-	ctx := context.Background()
+	requireConn(t)
+	ctx := context2.TestContext(t)
 	exp := []int{1, 2}
 	var out []int
 	mustQuery(t, conn.Query(ctx, "SELECT id FROM sqldb_test").Load(&out))
@@ -28,7 +30,8 @@ func TestLoadSlice(t *testing.T) {
 }
 
 func TestLoadMap(t *testing.T) {
-	ctx := context.Background()
+	requireConn(t)
+	ctx := context2.TestContext(t)
 	exp := map[string]interface{}{"id": int64(1), "name": "Alice"}
 	var out map[string]interface{}
 	mustQuery(t, conn.Query(ctx, "SELECT * FROM sqldb_test WHERE id = 1").Load(&out))
@@ -38,7 +41,8 @@ func TestLoadMap(t *testing.T) {
 }
 
 func TestLoadSliceOfMaps(t *testing.T) {
-	ctx := context.Background()
+	requireConn(t)
+	ctx := context2.TestContext(t)
 	exp := []map[string]interface{}{
 		{"id": int64(1), "name": "Alice"},
 		{"id": int64(2), "name": "Bob"},
@@ -51,7 +55,8 @@ func TestLoadSliceOfMaps(t *testing.T) {
 }
 
 func TestLoadStruct(t *testing.T) {
-	ctx := context.Background()
+	requireConn(t)
+	ctx := context2.TestContext(t)
 	exp := record{ID: 1, Name: "Alice"}
 	var out record
 	mustQuery(t, conn.Query(ctx, "SELECT * FROM sqldb_test WHERE id = 1").Load(&out))
@@ -61,7 +66,8 @@ func TestLoadStruct(t *testing.T) {
 }
 
 func TestLoadSliceOfStructs(t *testing.T) {
-	ctx := context.Background()
+	requireConn(t)
+	ctx := context2.TestContext(t)
 	exp := []record{
 		{ID: 1, Name: "Alice"},
 		{ID: 2, Name: "Bob"},

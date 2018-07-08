@@ -3,12 +3,11 @@ package dbc
 import (
 	"context"
 	"flag"
-	"fmt"
-	"log"
 	"os"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql" // MySQL driver
+	"github.com/localhots/gobelt/log"
 )
 
 type record struct {
@@ -19,25 +18,43 @@ type record struct {
 var conn Conn
 
 func TestMain(m *testing.M) {
+	ctx := context.Background()
 	dsn := flag.String("dsn", "", "Database source name")
 	flag.Parse()
 	if *dsn == "" {
-		log.Println("Database source name is not provided, skipping package tests")
-		os.Exit(0)
+		log.Warn(ctx, "Database source name is not provided, some tests would be skipped")
+	} else {
+		connect(ctx, *dsn)
+		seed(ctx)
 	}
 
-	log.Println("Establishing connection to the test database")
-	ctx := context.Background()
+	log.Info(ctx, "Starting test suite")
+	exitCode := m.Run()
+	if exitCode == 0 {
+		log.Info(ctx, "Test suite completed successfully")
+	} else {
+		log.Error(ctx, "Test suite failed")
+	}
+	if conn != nil {
+		if err := conn.Close(); err != nil {
+			log.Errorf(ctx, "Failed to close connection: %v\n", err)
+		}
+	}
+	os.Exit(exitCode)
+}
+
+func connect(ctx context.Context, dsn string) {
+	log.Info(ctx, "Establishing connection to the test database")
 	var err error
-	conn, err = Connect(ctx, MySQL, *dsn)
+	conn, err = Connect(ctx, MySQL, dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect: %v\n", err)
+		log.Fatalf(ctx, "Failed to connect: %v\n", err)
 	}
+}
 
-	log.Println("Seeding database")
-	mustExecMain(conn.Exec(ctx, `
-		DROP TABLE IF EXISTS sqldb_test
-	`))
+func seed(ctx context.Context) {
+	log.Info(ctx, "Seeding database")
+	mustExecMain(conn.Exec(ctx, `DROP TABLE IF EXISTS sqldb_test`))
 	mustExecMain(conn.Exec(ctx, `
 		CREATE TABLE sqldb_test (
 			id int(11) UNSIGNED NOT NULL,
@@ -51,14 +68,6 @@ func TestMain(m *testing.M) {
 			(1, "Alice"),
 			(2, "Bob")
 	`))
-
-	fmt.Println("Starting test suite")
-	exitCode := m.Run()
-	log.Println("Test suite finished")
-	if err := conn.Close(); err != nil {
-		log.Printf("Failed to close connection: %v\n", err)
-	}
-	os.Exit(exitCode)
 }
 
 func mustExec(t *testing.T, r ExecResult) ExecResult {
@@ -71,7 +80,7 @@ func mustExec(t *testing.T, r ExecResult) ExecResult {
 
 func mustExecMain(r ExecResult) ExecResult {
 	if r.Error() != nil {
-		log.Fatalf("Query failed: %v\n", r.Error())
+		log.Fatalf(context.Background(), "Query failed: %v\n", r.Error())
 	}
 	return r
 }
@@ -80,5 +89,12 @@ func mustQuery(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("Query failed: %v", err)
+	}
+}
+
+func requireConn(t *testing.T) {
+	t.Helper()
+	if conn == nil {
+		t.Skip("Connection required")
 	}
 }

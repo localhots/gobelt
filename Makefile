@@ -8,6 +8,9 @@ test:
 	@go test ./...
 
 dbtest:
-	@go test ./sqldb -dsn="root:@(127.0.0.1:3306)/sqldb_pkg_test"
+	@go test ./dbc -dsn="root:@(127.0.0.1:3306)/sqldb_pkg_test"
 
 fulltest: test dbtest
+
+bench:
+	cd ./dbc && go test -bench=. 

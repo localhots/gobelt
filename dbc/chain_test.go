@@ -6,6 +6,7 @@ import (
 )
 
 func TestCallChain(t *testing.T) {
+	requireConn(t)
 	ctx := context.Background()
 	mustExec(t, conn.
 		Exec(ctx, "INSERT INTO sqldb_test (id, name) VALUES (3, 'Fred')").Then().
