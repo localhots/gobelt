@@ -192,9 +192,7 @@ func (r *rows) loadStruct(typ reflect.Type, dest interface{}) {
 		}
 	}
 
-	err = r.rows.Scan(vals...)
-	if err != nil {
-		r.err = err
+	if r.err = r.rows.Scan(vals...); r.err != nil {
 		return
 	}
 
@@ -224,14 +222,11 @@ func (r *rows) loadSliceOfStructs(typ reflect.Type, dest interface{}) {
 				fval := val.Field(fi)
 				vals[i] = reflect.New(fval.Type()).Interface()
 			} else {
-				var dummy interface{}
-				vals[i] = &dummy
+				vals[i] = nopScanner{}
 			}
 		}
 
-		err = r.rows.Scan(vals...)
-		if err != nil {
-			r.err = err
+		if r.err = r.rows.Scan(vals...); r.err != nil {
 			return
 		}
 
@@ -263,3 +258,7 @@ func newValue(typ *sql.ColumnType) interface{} {
 		panic(fmt.Errorf("Unsupported MySQL type: %s", typ.DatabaseTypeName()))
 	}
 }
+
+type nopScanner struct{}
+
+func (s *nopScanner) Scan(interface{}) error { return nil }
