@@ -36,6 +36,16 @@ func Infof(ctx context.Context, format string, args ...interface{}) {
 	withFields(contextFields(ctx)).Infof(format, args...)
 }
 
+// Warn prints an warning message with given fields attached.
+func Warn(ctx context.Context, msg string, fields ...F) {
+	withFields(mergeFields(ctx, fields)).Warn(msg)
+}
+
+// Warnf prints a formatted warning message.
+func Warnf(ctx context.Context, format string, args ...interface{}) {
+	withFields(contextFields(ctx)).Warnf(format, args...)
+}
+
 // Error prints an error message with given fields attached.
 func Error(ctx context.Context, msg string, fields ...F) {
 	withFields(mergeFields(ctx, fields)).Error(msg)
